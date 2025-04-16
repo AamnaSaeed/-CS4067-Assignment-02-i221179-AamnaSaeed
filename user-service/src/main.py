@@ -5,10 +5,20 @@ import os
 import requests
 from dotenv import load_dotenv
 from passlib.context import CryptContext  # For password hashing
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
 app = FastAPI()
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or ["http://localhost:3000"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -38,6 +48,10 @@ class BookingRequest(BaseModel):
     event_id: int
     tickets: int
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str    
+
 @app.post("/register")
 def register(user: User):
     cursor = conn.cursor()
@@ -62,22 +76,16 @@ def register(user: User):
         cursor.close()
 
 @app.post("/login")
-def login(user: User):
+def login_user(login: LoginRequest):
     cursor = conn.cursor()
-    try:
-        # Fetch the user from the database
-        cursor.execute("SELECT id, password FROM users WHERE email = %s", (user.email,))
-        db_user = cursor.fetchone()
-        
-        # Verify the password
-        if not db_user or not pwd_context.verify(user.password, db_user[1]):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-        
-        return {"message": "Login successful", "user_id": db_user[0]}
-    except psycopg2.Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
-    finally:
-        cursor.close()
+    cursor.execute("SELECT id, name, email, password FROM users WHERE email = %s", (login.email,))
+    user = cursor.fetchone()
+
+    if user and pwd_context.verify(login.password, user[3]):
+        return {"message": "Login successful", "user_id": user[0]}
+    else:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
 
 @app.get("/users/{user_id}")
 def get_user(user_id: int):
@@ -117,3 +125,4 @@ def create_booking(booking: BookingRequest):
             raise HTTPException(status_code=response.status_code, detail="Failed to create booking")
     except requests.exceptions.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Error connecting to Booking Service: {e}")
+    
