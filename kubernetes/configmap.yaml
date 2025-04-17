@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: online-event-booking-aamna-saeed
+data:
+  DB_HOST: "postgres"
+  EVENT_SERVICE_URL: "http://event-service:8001"

@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-service
+  namespace: online-event-booking-aamna-saeed
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: booking-service
+  template:
+    metadata:
+      labels:
+        app: booking-service
+    spec:
+      containers:
+      - name: booking-service
+        image: aamnasaeed/booking-service:latest
+        ports:
+        - containerPort: 8002
+        envFrom:
+        - configMapRef:
+            name: app-config
+        - secretRef:
+            name: db-secrets
+        env:
+        - name: EVENT_SERVICE_URL
+          value: "http://event-service:8001"
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking-service
+  namespace: online-event-booking-aamna-saeed
+spec:
+  selector:
+    app: booking-service
+  ports:
+    - protocol: TCP
+      port: 8002
+      targetPort: 8002
